@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUIZ CERCER - Cerdas Cermat Online</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QRCode.js for generating barcodes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Poppins', sans-serif; }
+        .pulse-glow {
+            animation: pulseGlow 1.5s infinite;
+        }
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Global Notification Modal -->
+    <div id="customModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl text-center">
+            <div id="modalIcon" class="text-4xl mb-3 text-amber-400"><i class="fa-solid fa-circle-exclamation"></i></div>
+            <h3 id="modalTitle" class="text-xl font-bold mb-2">Informasi</h3>
+            <p id="modalMessage" class="text-slate-300 text-sm mb-6">Pesan disini...</p>
+            <button onclick="closeModal()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 font-semibold rounded-xl transition shadow-lg shadow-indigo-600/30">Mengerti</button>
+        </div>
+    </div>
+
+    <!-- Top Navbar -->
+    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-indigo-500 to-violet-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/30 text-white font-black text-xl flex items-center justify-center w-10 h-10">
+                QC
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-wide bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">QUIZ CERCER</h1>
+                <p class="text-xs text-slate-400" id="roleIndicator">Pilih Mode untuk Memulai</p>
+            </div>
+        </div>
+        <div id="roomBadge" class="hidden items-center space-x-2 bg-slate-700/60 px-3 py-1.5 rounded-full border border-slate-600 text-xs font-medium">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span id="displayRoomCode" class="font-mono tracking-wider text-emerald-300">ROOM: ---</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 flex flex-col p-4 md:p-6 max-w-7xl mx-auto w-full">
+
+        <!-- VIEW 1: SELECT ROLE & ROOM SETUP -->
+        <div id="viewRoleSelect" class="flex-1 flex items-center justify-center">
+            <div class="bg-slate-800 border border-slate-700/80 p-8 rounded-3xl shadow-2xl max-w-xl w-full text-center space-y-6">
+                <div class="inline-block p-4 bg-indigo-500/10 rounded-2xl text-indigo-400 text-4xl mb-1 border border-indigo-500/20">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <h2 class="text-3xl font-extrabold tracking-tight">Selamat Datang di QUIZ CERCER</h2>
+                <p class="text-slate-400 text-sm">Platform Cerdas Cermat Online Interaktif real-time antara Host Guru dan Regu Peserta.</p>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                    <button onclick="initHostMode()" class="p-6 bg-gradient-to-br from-indigo-600 to-violet-700 hover:from-indigo-500 hover:to-violet-600 rounded-2xl font-bold transition shadow-xl shadow-indigo-600/30 flex flex-col items-center space-y-3 group border border-indigo-400/30">
+                        <i class="fa-solid fa-chalkboard-user text-3xl group-hover:scale-110 transition"></i>
+                        <span>Masuk sebagai Host (Guru)</span>
+                    </button>
+                    <button onclick="showParticipantJoinModal()" class="p-6 bg-slate-700 hover:bg-slate-600 rounded-2xl font-bold transition shadow-xl border border-slate-600 flex flex-col items-center space-y-3 group">
+                        <i class="fa-solid fa-users-rectangle text-3xl group-hover:scale-110 transition text-emerald-400"></i>
+                        <span>Masuk sebagai Peserta (Regu)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: HOST DASHBOARD -->
+        <div id="viewHostDashboard" class="hidden flex-1 flex flex-col space-y-6">
+            <!-- Host Top Bar / Room Meta -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">Kode Room</p>
+                        <h3 id="hostRoomCodeText" class="text-xl font-black font-mono text-indigo-400 tracking-wider">------</h3>
+                    </div>
+                    <button onclick="copyShareLink()" class="p-2.5 bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/40 rounded-xl transition text-sm" title="Salin Link Kuis">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </button>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">Target Peserta (Regu)</p>
+                        <select id="targetParticipantCount" onchange="updateTargetParticipants(this.value)" class="bg-slate-700 border border-slate-600 rounded-lg px-2 py-1 text-sm font-bold text-emerald-400 mt-1 outline-none">
+                            <option value="2">2 Regu</option>
+                            <option value="3">3 Regu</option>
+                            <option value="4" selected>4 Regu</option>
+                            <option value="5">5 Regu</option>
+                            <option value="6">6 Regu</option>
+                        </select>
+                    </div>
+                    <div class="text-right">
+                        <span id="connectedCountBadge" class="text-xl font-black text-emerald-400">0</span>
+                        <p class="text-xs text-slate-400">Terhubung</p>
+                    </div>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-2xl flex items-center justify-between md:col-span-2">
+                    <div class="flex items-center space-x-3">
+                        <div id="qrCodeContainer" class="bg-white p-1.5 rounded-lg w-16 h-16 flex items-center justify-center overflow-hidden"></div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium">Barcode & Quick Join</p>
+                            <p class="text-xs text-emerald-400 mt-0.5"><i class="fa-solid fa-qrcode"></i> Scan / Gunakan Kode</p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="switchHostTab('questions')" id="btnTabQ" class="px-4 py-2 bg-indigo-600 text-xs font-semibold rounded-xl transition">Bank Soal</button>
+                        <button onclick="switchHostTab('live')" id="btnTabL" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold rounded-xl transition">Live Kuis</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 1: BANK SOAL & PESERTA MANAGEMENT -->
+            <div id="hostTabQuestions" class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+                <!-- Left Column: Question Manager & Import -->
+                <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 flex flex-col space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-bold flex items-center space-x-2">
+                            <i class="fa-solid fa-book-open text-indigo-400"></i>
+                            <span>Kelola Soal Cerdas Cermat</span>
+                        </h3>
+                        <div class="flex space-x-2">
+                            <label class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold rounded-xl cursor-pointer transition shadow flex items-center space-x-1.5">
+                                <input type="file" id="importFile" accept=".docx,.doc,.pdf,.txt" class="hidden" onchange="handleFileImport(event)">
+                                <i class="fa-solid fa-file-arrow-up"></i>
+                                <span>Import (Word/PDF/Txt)</span>
+                            </label>
+                            <button onclick="openQuestionModal()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold rounded-xl transition shadow flex items-center space-x-1.5">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Tambah Soal</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Question List Table -->
+                    <div class="flex-1 overflow-y-auto max-h-[420px] space-y-3 pr-2" id="hostQuestionList">
+                        <!-- Dynamic rendered questions -->
+                    </div>
+                </div>
+
+                <!-- Right Column: Registered Participants / Teams Monitor -->
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex flex-col space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-bold flex items-center space-x-2">
+                            <i class="fa-solid fa-users text-emerald-400"></i>
+                            <span>Regu Peserta Terhubung</span>
+                        </h3>
+                        <button onclick="resetParticipants()" class="text-xs text-rose-400 hover:text-rose-300"><i class="fa-solid fa-rotate-right"></i> Reset</button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto space-y-3" id="hostParticipantsList">
+                        <!-- Dynamic connected participant teams -->
+                    </div>
+                    <div class="pt-2 border-t border-slate-700">
+                        <button onclick="switchHostTab('live')" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold rounded-xl transition shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2">
+                            <span>Mulai Sesi Kuis Live</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: LIVE QUIZ ARENA (HOST) -->
+            <div id="hostTabLive" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+                <!-- Left: Question Display & Timer Control -->
+                <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 flex flex-col justify-between space-y-6">
+                    <!-- Top Bar: Current Question & Timer Settings -->
+                    <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 rounded-lg text-sm font-bold" id="liveQIndexLabel">Soal 1/10</span>
+                            <div class="flex items-center space-x-2">
+                                <label class="text-xs text-slate-400">Timer:</label>
+                                <select id="timerDurationSelect" onchange="changeTimerDuration(this.value)" class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs font-bold text-amber-400 outline-none">
+                                    <option value="5">5 Detik</option>
+                                    <option value="10">10 Detik</option>
+                                    <option value="15" selected>15 Detik</option>
+                                    <option value="20">20 Detik</option>
+                                    <option value="25">25 Detik</option>
+                                    <option value="30">30 Detik</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div id="liveTimerDisplay" class="text-3xl font-black font-mono text-amber-400 bg-slate-900/80 px-4 py-1.5 rounded-xl border border-slate-700">15</div>
+                            <button onclick="startTimer()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-xs transition shadow-lg shadow-emerald-600/30 flex items-center space-x-1.5">
+                                <i class="fa-solid fa-play"></i><span>Mulai</span>
+                            </button>
+                            <button onclick="resetTimer()" class="px-3 py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs transition">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Question Content Area -->
+                    <div class="flex-1 flex flex-col justify-center space-y-6">
+                        <h2 id="liveQuestionText" class="text-xl md:text-2xl font-bold text-slate-100 leading-relaxed">
+                            Memuat Pertanyaan Kuis...
+                        </h2>
+                        <!-- Options Grid -->
+                        <div id="liveOptionsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <!-- Options -->
+                        </div>
+                    </div>
+
+                    <!-- Bottom Controls: Next Question -->
+                    <div class="flex justify-between items-center pt-4 border-t border-slate-700">
+                        <button onclick="switchHostTab('questions')" class="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-xs font-semibold rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-1"></i> Kembali ke Bank Soal
+                        </button>
+                        <button onclick="nextQuestion()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-xl text-sm transition shadow-lg shadow-indigo-600/30 flex items-center space-x-2">
+                            <span>Soal Selanjutnya</span>
+                            <i class="fa-solid fa-forward"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Buzzer Activity & Scoreboard Control -->
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 flex flex-col space-y-6">
+                    <div>
+                        <h3 class="text-base font-bold flex items-center space-x-2 mb-2">
+                            <i class="fa-solid fa-bell text-amber-400"></i>
+                            <span>Monitor Bel (Buzzer)</span>
+                        </h3>
+                        <div id="hostBuzzerAlertBox" class="p-4 rounded-xl bg-slate-900 border border-slate-700 text-center">
+                            <p class="text-xs text-slate-400">Menunggu peserta menekan bel...</p>
+                            <div id="buzzerWinnerDisplay" class="text-lg font-black text-emerald-400 mt-1">Bel Belum Ditekan</div>
+                        </div>
+                        <button onclick="resetBuzzer()" class="w-full mt-2 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold rounded-xl transition">
+                            Reset Bel Peserta
+                        </button>
+                    </div>
+
+                    <!-- Scores & Point Adjustment (+10 / -5) -->
+                    <div class="flex-1 flex flex-col space-y-3">
+                        <h3 class="text-base font-bold flex items-center space-x-2">
+                            <i class="fa-solid fa-trophy text-amber-400"></i>
+                            <span>Poin & Skor Regu</span>
+                        </h3>
+                        <div class="flex-1 overflow-y-auto space-y-3" id="hostScoreList">
+                            <!-- Dynamic team score controllers -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 3: PARTICIPANT ARENA -->
+        <div id="viewParticipantArena" class="hidden flex-1 flex flex-col max-w-2xl mx-auto w-full space-y-6 justify-center">
+            <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl text-center space-y-6 relative overflow-hidden">
+                <div class="absolute top-4 left-4 bg-slate-700/80 px-3 py-1 rounded-full text-xs font-mono font-medium text-slate-300">
+                    Regu: <span id="myTeamNameDisplay" class="text-emerald-400 font-bold">---</span>
+                </div>
+                <div class="absolute top-4 right-4 bg-indigo-500/20 border border-indigo-500/30 px-3 py-1 rounded-full text-xs font-bold text-indigo-300">
+                    Skor: <span id="myTeamScoreDisplay">0</span> Pts
+                </div>
+
+                <div class="pt-6">
+                    <span class="text-xs text-slate-400 uppercase tracking-widest">Status Kuis Aktif</span>
+                    <h2 id="participantQuestionTitle" class="text-xl md:text-2xl font-bold mt-2 text-slate-100">
+                        Menunggu Guru Memulai Soal...
+                    </h2>
+                </div>
+
+                <!-- Big Buzzer Button -->
+                <div class="py-8 flex flex-col items-center justify-center">
+                    <button id="buzzerBtn" onclick="pressBuzzer()" class="w-48 h-48 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 active:scale-95 transition shadow-2xl shadow-rose-600/50 flex flex-col items-center justify-center border-8 border-rose-700/50 group select-none">
+                        <i class="fa-solid fa-bell text-5xl md:text-6xl text-white mb-2 group-hover:rotate-12 transition"></i>
+                        <span class="text-white font-extrabold text-xl md:text-2xl tracking-wider">TEKAN BEL</span>
+                    </button>
+                    <p id="buzzerStatusNote" class="text-xs text-slate-400 mt-4">Tekan bel jika regu Anda tahu jawabannya!</p>
+                </div>
+
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-700 text-left">
+                    <p class="text-xs text-slate-400 font-semibold mb-1">Informasi Soal:</p>
+                    <p id="participantCurrentInfo" class="text-sm text-slate-300 font-medium">Belum ada soal aktif dari host.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Join Participant (Barcode/Link input) -->
+    <div id="participantJoinModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl space-y-6">
+            <div class="text-center">
+                <div class="inline-block p-3 bg-emerald-500/10 rounded-2xl text-emerald-400 text-3xl mb-2 border border-emerald-500/20">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                </div>
+                <h3 class="text-2xl font-bold">Gabung Kuis Regu</h3>
+                <p class="text-slate-400 text-xs mt-1">Masukkan kode room dari host atau scan barcode.</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Kode Room Kuis</label>
+                    <input type="text" id="joinRoomCodeInput" placeholder="Contoh: QC-8921" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm uppercase tracking-widest font-mono text-center font-bold text-indigo-400 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Nama Regu Peserta</label>
+                    <input type="text" id="joinTeamNameInput" placeholder="Contoh: Regu Alpha / SMAN 1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-center font-bold text-slate-100 focus:outline-none focus:border-indigo-500">
+                </div>
+                <button onclick="submitJoinParticipant()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl transition shadow-lg shadow-emerald-600/30 text-sm">
+                    Masuk Ruangan Kuis
+                </button>
+            </div>
+            <button onclick="closeParticipantJoinModal()" class="w-full text-xs text-slate-400 hover:text-slate-300 pt-2">Batal</button>
+        </div>
+    </div>
+
+    <!-- Modal Add/Edit Question -->
+    <div id="questionModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <h3 id="questionModalTitle" class="text-xl font-bold">Tambah Soal Baru</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Tipe Soal</label>
+                    <select id="qTypeSelect" onchange="toggleQuestionTypeFields(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-medium outline-none">
+                        <option value="pg">Pilihan Ganda</option>
+                        <option value="bs">Benar / Salah</option>
+                        <option value="essay">Essay / Uraian</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Pertanyaan</label>
+                    <textarea id="qTextInput" rows="3" placeholder="Tuliskan pertanyaan di sini..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none resize-none"></textarea>
+                </div>
+
+                <div id="qOptionsContainer" class="space-y-2">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Pilihan Jawaban (A, B, C, D)</label>
+                    <input type="text" id="optA" placeholder="Pilihan A" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs mb-2">
+                    <input type="text" id="optB" placeholder="Pilihan B" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs mb-2">
+                    <input type="text" id="optC" placeholder="Pilihan C" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs mb-2">
+                    <input type="text" id="optD" placeholder="Pilihan D" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Kunci Jawaban</label>
+                    <input type="text" id="qKeyInput" placeholder="Contoh: A, Benar, atau kata kunci essay" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none font-bold text-emerald-400">
+                </div>
+
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="saveQuestion()" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-xl text-sm transition shadow">Simpan Soal</button>
+                    <button onclick="closeQuestionModal()" class="px-5 py-3 bg-slate-700 hover:bg-slate-600 font-bold rounded-xl text-sm transition">Batal</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase handles & methods
+        window.fb = {
+            app: null,
+            db: null,
+            auth: null,
+            user: null,
+            appId: typeof __app_id !== 'undefined' ? __app_id : 'quiz-cercer-default-app',
+            doc, setDoc, getDoc, onSnapshot, updateDoc, collection
+        };
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        async function initFirebase() {
+            try {
+                if (firebaseConfig && firebaseConfig.projectId) {
+                    window.fb.app = initializeApp(firebaseConfig);
+                    window.fb.db = getFirestore(window.fb.app);
+                    window.fb.auth = getAuth(window.fb.app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        const cred = await signInWithCustomToken(window.fb.auth, __initial_auth_token);
+                        window.fb.user = cred.user;
+                    } else {
+                        const cred = await signInAnonymously(window.fb.auth);
+                        window.fb.user = cred.user;
+                    }
+                    console.log("Online Sync Ready:", window.fb.user.uid);
+                }
+            } catch (err) {
+                console.warn("Offline fallback mode:", err);
+            }
+        }
+        initFirebase();
+    </script>
+
+    <!-- Application Script Logic -->
+    <script>
+        // Audio synthesis for timer beep and buzzer bell
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playBeep(frequency = 440, duration = 0.15) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = frequency;
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playBellSound() {
+            // Ding bell effect for buzzer
+            playBeep(880, 0.4);
+            setTimeout(() => playBeep(1320, 0.6), 150);
+        }
+
+        function playTimerEndSound() {
+            playBeep(300, 0.5);
+            setTimeout(() => playBeep(200, 0.8), 300);
+        }
+
+        // Global State
+        let currentRole = null; // 'host' or 'participant'
+        let roomCode = '';
+        let targetParticipants = 4;
+        let timerDuration = 15;
+        let timerInterval = null;
+        let timeLeft = 15;
+        let currentQuestionIndex = 0;
+        let editingQuestionId = null;
+
+        // Mock Default Questions
+        let questions = [
+            { id: 'q1', type: 'pg', text: 'Berapakah hasil dari 12 x 15 ?', options: ['150', '180', '160', '190'], key: '180' },
+            { id: 'q2', type: 'bs', text: 'Ibu Kota Negara Indonesia saat ini adalah Jakarta.', options: ['Benar', 'Salah'], key: 'Salah' },
+            { id: 'q3', type: 'essay', text: 'Sebutkan kepanjangan dari singkatan UNESCO!', options: [], key: 'United Nations Educational, Scientific and Cultural Organization' }
+        ];
+
+        let participants = []; // { id, name, score, buzzerPressedTime }
+        let buzzerWinner = null;
+        let buzzerWinnerName = '';
+        let roomUnsubscribe = null;
+
+        // Helper: Sync state to Cloud Database
+        async function syncRoomToCloud() {
+            if (!window.fb || !window.fb.db || !window.fb.user || !roomCode) return;
+            try {
+                const roomRef = window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'rooms', roomCode);
+                await window.fb.setDoc(roomRef, {
+                    roomCode,
+                    targetParticipants,
+                    timerDuration,
+                    currentQuestionIndex,
+                    questions,
+                    participants,
+                    buzzerWinner,
+                    buzzerWinnerName,
+                    updatedAt: Date.now()
+                }, { merge: true });
+            } catch (e) {
+                console.error("Sync error:", e);
+            }
+        }
+
+        // Helper: Listen to Cloud Database changes
+        function listenToRoomCloud(code) {
+            if (!window.fb || !window.fb.db || !window.fb.user) return;
+            if (roomUnsubscribe) roomUnsubscribe();
+
+            const roomRef = window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'rooms', code);
+            roomUnsubscribe = window.fb.onSnapshot(roomRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (currentRole === 'host') {
+                        // Host receives participant joins & buzzer presses
+                        participants = data.participants || [];
+                        if (data.buzzerWinner && !buzzerWinner) {
+                            buzzerWinner = data.buzzerWinner;
+                            buzzerWinnerName = data.buzzerWinnerName;
+                            playBellSound();
+                            document.getElementById('hostBuzzerAlertBox').className = 'p-4 rounded-xl bg-emerald-950/80 border border-emerald-500 text-center pulse-glow';
+                            document.getElementById('buzzerWinnerDisplay').innerText = `${buzzerWinnerName} Menekan Bel Pertama!`;
+                        }
+                        renderHostParticipants();
+                    } else if (currentRole === 'participant') {
+                        // Participant receives score updates, active question, and buzzer lock status
+                        participants = data.participants || [];
+                        const me = participants.find(p => p.id === currentParticipantId);
+                        if (me) {
+                            myScore = me.score;
+                            document.getElementById('myTeamScoreDisplay').innerText = myScore;
+                        }
+
+                        // Update active question display for participant
+                        const qList = data.questions || [];
+                        const qIdx = data.currentQuestionIndex || 0;
+                        if (qList[qIdx]) {
+                            document.getElementById('participantQuestionTitle').innerText = `Soal ${qIdx + 1} dari ${qList.length}`;
+                            document.getElementById('participantCurrentInfo').innerText = qList[qIdx].text;
+                        }
+
+                        // Update buzzer button state (lock if someone pressed, unlock if host reset)
+                        const btn = document.getElementById('buzzerBtn');
+                        const note = document.getElementById('buzzerStatusNote');
+                        if (data.buzzerWinner) {
+                            buzzerWinner = data.buzzerWinner;
+                            btn.disabled = true;
+                            btn.classList.add('opacity-40', 'cursor-not-allowed', 'scale-95');
+                            if (data.buzzerWinner === currentParticipantId) {
+                                note.innerText = "🔔 ANDA BERHASIL MENEKAN BEL PERTAMA!";
+                                note.className = "text-xs text-emerald-400 font-bold mt-4";
+                            } else {
+                                note.innerText = `🔒 Terkunci! ${data.buzzerWinnerName} lebih dulu menekan bel.`;
+                                note.className = "text-xs text-amber-400 font-semibold mt-4";
+                            }
+                        } else {
+                            buzzerWinner = null;
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-40', 'cursor-not-allowed', 'scale-95');
+                            note.innerText = "Tekan bel jika regu Anda tahu jawabannya!";
+                            note.className = "text-xs text-slate-400 mt-4";
+                        }
+                    }
+                }
+            }, (err) => console.error("Snapshot error:", err));
+        }
+
+        // Modal Utility
+        function showModal(title, message, iconClass = 'fa-solid fa-circle-exclamation text-amber-400') {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = message;
+            document.getElementById('modalIcon').innerHTML = `<i class="${iconClass}"></i>`;
+            document.getElementById('customModal').classList.remove('hidden');
+        }
+        function closeModal() {
+            document.getElementById('customModal').classList.add('hidden');
+        }
+
+        // Host Mode Initialization
+        async function initHostMode() {
+            currentRole = 'host';
+            roomCode = 'QC-' + Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('roleIndicator').innerText = "Mode: Host Guru";
+            document.getElementById('viewRoleSelect').classList.add('hidden');
+            document.getElementById('viewHostDashboard').classList.remove('hidden');
+            document.getElementById('roomBadge').classList.remove('hidden');
+            document.getElementById('hostRoomCodeText').innerText = roomCode;
+            document.getElementById('displayRoomCode').innerText = `ROOM: ${roomCode}`;
+
+            generateQRCode();
+            renderHostQuestions();
+            renderHostParticipants();
+            renderHostLiveQuiz();
+            renderHostScores();
+
+            await syncRoomToCloud();
+            listenToRoomCloud(roomCode);
+        }
+
+        function getValidShareUrl() {
+            // Avoid about:srcdoc or blob URLs that cause 404 on external devices
+            const currentHref = window.location.href;
+            if (currentHref.startsWith('http') && !currentHref.includes('srcdoc')) {
+                const base = `${window.location.origin}${window.location.pathname}`;
+                return `${base}?room=${roomCode}`;
+            }
+            return roomCode; // Fallback to room code if running inside an isolated iframe preview
+        }
+
+        function generateQRCode() {
+            const qrContainer = document.getElementById('qrCodeContainer');
+            qrContainer.innerHTML = '';
+            const qrContent = getValidShareUrl();
+            new QRCode(qrContainer, {
+                text: qrContent,
+                width: 60,
+                height: 60,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctCorrectionLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        function copyShareLink() {
+            const shareContent = getValidShareUrl();
+            const isUrl = shareContent.startsWith('http');
+            const copyText = isUrl 
+                ? `Gabung Kuis Cerdas Cermat (QUIZ CERCER)!\nLink: ${shareContent}\nKode Room: ${roomCode}`
+                : `Buka aplikasi QUIZ CERCER, pilih "Masuk sebagai Peserta", lalu masukkan Kode Room: ${roomCode}`;
+
+            const tempInput = document.createElement('textarea');
+            tempInput.value = copyText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            if (!isUrl) {
+                showModal(
+                    'Kode Room Disalin!', 
+                    `Karena aplikasi ini masih dijalankan dalam mode pratinjau (belum di-hosting ke domain publik), bagikan Kode Room "${roomCode}" kepada siswa agar mereka memasukkannya di halaman utama.`, 
+                    'fa-solid fa-circle-info text-indigo-400'
+                );
+            } else {
+                showModal('Undangan Berhasil Disalin!', 'Link dan Kode Room telah disalin. Bagikan kepada siswa untuk bergabung.', 'fa-solid fa-circle-check text-emerald-400');
+            }
+        }
+
+        function switchHostTab(tabName) {
+            const tabQ = document.getElementById('hostTabQuestions');
+            const tabL = document.getElementById('hostTabLive');
+            const btnQ = document.getElementById('btnTabQ');
+            const btnL = document.getElementById('btnTabL');
+
+            if (tabName === 'questions') {
+                tabQ.classList.remove('hidden');
+                tabL.classList.add('hidden');
+                btnQ.className = 'px-4 py-2 bg-indigo-600 text-xs font-semibold rounded-xl transition';
+                btnL.className = 'px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold rounded-xl transition';
+            } else {
+                tabQ.classList.add('hidden');
+                tabL.classList.remove('hidden');
+                btnL.className = 'px-4 py-2 bg-indigo-600 text-xs font-semibold rounded-xl transition';
+                btnQ.className = 'px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold rounded-xl transition';
+                renderHostLiveQuiz();
+                renderHostScores();
+            }
+        }
+
+        function updateTargetParticipants(val) {
+            targetParticipants = parseInt(val);
+            renderHostParticipants();
+            syncRoomToCloud();
+        }
+
+        // Question Management
+        function renderHostQuestions() {
+            const listEl = document.getElementById('hostQuestionList');
+            listEl.innerHTML = '';
+            if(questions.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">Belum ada soal. Silakan tambahkan soal.</p>`;
+                return;
+            }
+            questions.forEach((q, idx) => {
+                listEl.innerHTML += `
+                    <div class="bg-slate-900/60 border border-slate-700/80 p-4 rounded-xl flex justify-between items-start">
+                        <div class="space-y-1 pr-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-[10px] font-bold rounded">Soal ${idx+1} (${q.type.toUpperCase()})</span>
+                                <span class="text-xs text-emerald-400 font-semibold">Kunci: ${q.key}</span>
+                            </div>
+                            <p class="text-sm font-semibold text-slate-200">${q.text}</p>
+                        </div>
+                        <div class="flex space-x-1">
+                            <button onclick="editQuestion('${q.id}')" class="p-2 text-slate-400 hover:text-indigo-400 text-xs"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteQuestion('${q.id}')" class="p-2 text-slate-400 hover:text-rose-400 text-xs"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function openQuestionModal(qId = null) {
+            editingQuestionId = qId;
+            if(qId) {
+                const q = questions.find(x => x.id === qId);
+                document.getElementById('questionModalTitle').innerText = 'Edit Soal';
+                document.getElementById('qTypeSelect').value = q.type;
+                document.getElementById('qTextInput').value = q.text;
+                document.getElementById('qKeyInput').value = q.key;
+                toggleQuestionTypeFields(q.type);
+                if(q.type === 'pg') {
+                    document.getElementById('optA').value = q.options[0] || '';
+                    document.getElementById('optB').value = q.options[1] || '';
+                    document.getElementById('optC').value = q.options[2] || '';
+                    document.getElementById('optD').value = q.options[3] || '';
+                }
+            } else {
+                document.getElementById('questionModalTitle').innerText = 'Tambah Soal Baru';
+                document.getElementById('qTypeSelect').value = 'pg';
+                document.getElementById('qTextInput').value = '';
+                document.getElementById('qKeyInput').value = '';
+                toggleQuestionTypeFields('pg');
+                document.getElementById('optA').value = '';
+                document.getElementById('optB').value = '';
+                document.getElementById('optC').value = '';
+                document.getElementById('optD').value = '';
+            }
+            document.getElementById('questionModal').classList.remove('hidden');
+        }
+
+        function closeQuestionModal() {
+            document.getElementById('questionModal').classList.add('hidden');
+        }
+
+        function toggleQuestionTypeFields(type) {
+            const container = document.getElementById('qOptionsContainer');
+            if(type === 'pg') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        function saveQuestion() {
+            const type = document.getElementById('qTypeSelect').value;
+            const text = document.getElementById('qTextInput').value.trim();
+            const key = document.getElementById('qKeyInput').value.trim();
+            if(!text || !key) {
+                showModal('Peringatan', 'Pertanyaan dan kunci jawaban tidak boleh kosong!');
+                return;
+            }
+            let options = [];
+            if(type === 'pg') {
+                options = [
+                    document.getElementById('optA').value.trim(),
+                    document.getElementById('optB').value.trim(),
+                    document.getElementById('optC').value.trim(),
+                    document.getElementById('optD').value.trim()
+                ];
+            } else if(type === 'bs') {
+                options = ['Benar', 'Salah'];
+            }
+
+            if(editingQuestionId) {
+                const q = questions.find(x => x.id === editingQuestionId);
+                q.type = type;
+                q.text = text;
+                q.options = options;
+                q.key = key;
+            } else {
+                questions.push({
+                    id: 'q_' + Date.now(),
+                    type, text, options, key
+                });
+            }
+            closeQuestionModal();
+            renderHostQuestions();
+            syncRoomToCloud();
+        }
+
+        function editQuestion(id) {
+            openQuestionModal(id);
+        }
+
+        function deleteQuestion(id) {
+            questions = questions.filter(x => x.id !== id);
+            renderHostQuestions();
+            syncRoomToCloud();
+        }
+
+        // Simulated Word/PDF/Txt File Import Parser
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                // Parse lines to create simulated questions
+                const lines = content.split('\n').filter(l => l.trim().length > 0);
+                let addedCount = 0;
+                lines.forEach(line => {
+                    questions.push({
+                        id: 'imp_' + Math.random(),
+                        type: 'pg',
+                        text: line,
+                        options: ['Opsi A', 'Opsi B', 'Opsi C', 'Opsi D'],
+                        key: 'Opsi A'
+                    });
+                    addedCount++;
+                });
+                renderHostQuestions();
+                syncRoomToCloud();
+                showModal('Import Berhasil!', `Berhasil menambahkan ${addedCount} soal dari dokumen ${file.name}.`, 'fa-solid fa-circle-check text-emerald-400');
+            };
+            reader.readAsText(file);
+        }
+
+        // Participants Monitor Management
+        function renderHostParticipants() {
+            const listEl = document.getElementById('hostParticipantsList');
+            listEl.innerHTML = '';
+            document.getElementById('connectedCountBadge').innerText = `${participants.length}/${targetParticipants}`;
+            
+            for(let i=0; i<targetParticipants; i++) {
+                const p = participants[i];
+                if(p) {
+                    listEl.innerHTML += `
+                        <div class="bg-slate-900/60 border border-emerald-500/30 p-3.5 rounded-xl flex justify-between items-center">
+                            <div class="flex items-center space-x-3">
+                                <span class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-100">${p.name}</h4>
+                                    <p class="text-[10px] text-emerald-400">Terhubung & Siap</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm font-bold font-mono text-amber-400">${p.score} Pts</span>
+                                <button onclick="removeParticipant('${p.id}')" class="text-rose-400 hover:text-rose-300 text-xs p-1"><i class="fa-solid fa-user-minus"></i></button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    listEl.innerHTML += `
+                        <div class="bg-slate-900/30 border border-dashed border-slate-700 p-3.5 rounded-xl flex justify-between items-center opacity-60">
+                            <div class="flex items-center space-x-3">
+                                <span class="w-3 h-3 rounded-full bg-slate-600"></span>
+                                <span class="text-xs text-slate-400 italic">Menunggu Peserta Regu ${i+1}...</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            renderHostScores();
+        }
+
+        function removeParticipant(id) {
+            participants = participants.filter(x => x.id !== id);
+            renderHostParticipants();
+            syncRoomToCloud();
+        }
+
+        function resetParticipants() {
+            participants = [];
+            renderHostParticipants();
+            syncRoomToCloud();
+        }
+
+        // Live Quiz Arena (Host)
+        function renderHostLiveQuiz() {
+            if(questions.length === 0) {
+                document.getElementById('liveQuestionText').innerText = "Belum ada soal tersedia di bank soal!";
+                document.getElementById('liveOptionsGrid').innerHTML = '';
+                return;
+            }
+            const q = questions[currentQuestionIndex] || questions[0];
+            document.getElementById('liveQIndexLabel').innerText = `Soal ${currentQuestionIndex + 1}/${questions.length}`;
+            document.getElementById('liveQuestionText').innerText = q.text;
+
+            const grid = document.getElementById('liveOptionsGrid');
+            grid.innerHTML = '';
+            if(q.type === 'pg' || q.type === 'bs') {
+                q.options.forEach((opt, idx) => {
+                    const optLetter = ['A', 'B', 'C', 'D'][idx] || (idx+1);
+                    const isCorrect = (opt === q.key || optLetter === q.key);
+                    grid.innerHTML += `
+                        <div onclick="checkAnswerChoice(this, ${isCorrect})" class="bg-slate-900/80 hover:bg-slate-700/80 border border-slate-700 p-3.5 rounded-xl cursor-pointer transition flex items-center space-x-3">
+                            <span class="w-7 h-7 rounded-lg bg-indigo-600/20 text-indigo-400 font-bold flex items-center justify-center text-xs">${optLetter}</span>
+                            <span class="text-sm font-medium text-slate-200">${opt}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                grid.innerHTML = `<div class="col-span-2 bg-slate-900/60 p-4 rounded-xl border border-slate-700 text-sm text-slate-300">Kunci Jawaban Essay: <strong class="text-emerald-400">${q.key}</strong></div>`;
+            }
+        }
+
+        function checkAnswerChoice(el, isCorrect) {
+            if(isCorrect) {
+                el.classList.remove('bg-slate-900/80', 'border-slate-700');
+                el.classList.add('bg-emerald-600/30', 'border-emerald-500', 'text-emerald-300');
+                playBeep(1000, 0.2);
+            } else {
+                el.classList.remove('bg-slate-900/80', 'border-slate-700');
+                el.classList.add('bg-rose-600/30', 'border-rose-500', 'text-rose-300');
+                playBeep(200, 0.3);
+            }
+        }
+
+        function changeTimerDuration(val) {
+            timerDuration = parseInt(val);
+            timeLeft = timerDuration;
+            document.getElementById('liveTimerDisplay').innerText = timeLeft;
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = timerDuration;
+            document.getElementById('liveTimerDisplay').innerText = timeLeft;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('liveTimerDisplay').innerText = timeLeft;
+                if(timeLeft <= 3 && timeLeft > 0) {
+                    playBeep(600, 0.1);
+                }
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    playTimerEndSound();
+                }
+            }, 1000);
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timeLeft = timerDuration;
+            document.getElementById('liveTimerDisplay').innerText = timeLeft;
+        }
+
+        function nextQuestion() {
+            if(currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                renderHostLiveQuiz();
+                resetTimer();
+                resetBuzzer();
+                syncRoomToCloud();
+            } else {
+                showModal('Kuis Selesai', 'Semua soal dalam sesi ini telah selesai ditampilkan.', 'fa-solid fa-flag-checkered text-emerald-400');
+            }
+        }
+
+        function resetBuzzer() {
+            buzzerWinner = null;
+            buzzerWinnerName = '';
+            document.getElementById('hostBuzzerAlertBox').className = 'p-4 rounded-xl bg-slate-900 border border-slate-700 text-center';
+            document.getElementById('buzzerWinnerDisplay').innerText = 'Bel Belum Ditekan';
+            syncRoomToCloud();
+        }
+
+        function renderHostScores() {
+            const listEl = document.getElementById('hostScoreList');
+            listEl.innerHTML = '';
+            if(participants.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">Belum ada regu peserta terhubung.</p>`;
+                return;
+            }
+            participants.forEach(p => {
+                listEl.innerHTML += `
+                    <div class="bg-slate-900/60 border border-slate-700 p-3 rounded-xl flex justify-between items-center">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-200">${p.name}</h4>
+                            <span class="text-xs font-black text-amber-400 font-mono">${p.score} Poin</span>
+                        </div>
+                        <div class="flex space-x-1.5">
+                            <button onclick="adjustScore('${p.id}', 10)" class="px-2 py-1 bg-emerald-600/30 text-emerald-400 hover:bg-emerald-600/50 rounded text-xs font-bold">+10</button>
+                            <button onclick="adjustScore('${p.id}', -5)" class="px-2 py-1 bg-rose-600/30 text-rose-400 hover:bg-rose-600/50 rounded text-xs font-bold">-5</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function adjustScore(id, amount) {
+            const p = participants.find(x => x.id === id);
+            if(p) {
+                p.score += amount;
+                renderHostParticipants();
+                syncRoomToCloud();
+            }
+        }
+
+        // Participant Mode Flows
+        let currentParticipantId = null;
+        let myScore = 0;
+
+        function showParticipantJoinModal() {
+            document.getElementById('participantJoinModal').classList.remove('hidden');
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.get('room')) {
+                document.getElementById('joinRoomCodeInput').value = urlParams.get('room');
+            }
+        }
+
+        function closeParticipantJoinModal() {
+            document.getElementById('participantJoinModal').classList.add('hidden');
+        }
+
+        async function submitJoinParticipant() {
+            const code = document.getElementById('joinRoomCodeInput').value.trim().toUpperCase();
+            const teamName = document.getElementById('joinTeamNameInput').value.trim();
+            if(!code || !teamName) {
+                showModal('Peringatan', 'Kode room dan nama regu wajib diisi!');
+                return;
+            }
+
+            roomCode = code;
+            currentRole = 'participant';
+            currentParticipantId = 'p_' + Math.random().toString(36).substr(2, 9);
+            myScore = 0;
+
+            const newParticipant = {
+                id: currentParticipantId,
+                name: teamName,
+                score: 0
+            };
+
+            if (window.fb && window.fb.db && window.fb.user) {
+                try {
+                    const roomRef = window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'rooms', code);
+                    const snap = await window.fb.getDoc(roomRef);
+                    if (!snap.exists()) {
+                        showModal('Room Tidak Ditemukan', `Kode Room "${code}" tidak aktif atau salah. Periksa kembali kode dari guru Anda.`);
+                        return;
+                    }
+                    const roomData = snap.data();
+                    const updatedParticipants = [...(roomData.participants || []), newParticipant];
+                    await window.fb.updateDoc(roomRef, { participants: updatedParticipants });
+                    listenToRoomCloud(code);
+                } catch (err) {
+                    console.error("Join error:", err);
+                }
+            } else {
+                participants.push(newParticipant);
+            }
+
+            document.getElementById('roleIndicator').innerText = `Mode: Peserta (${teamName})`;
+            document.getElementById('viewRoleSelect').classList.add('hidden');
+            document.getElementById('participantJoinModal').classList.add('hidden');
+            document.getElementById('viewParticipantArena').classList.remove('hidden');
+            document.getElementById('roomBadge').classList.remove('hidden');
+            document.getElementById('displayRoomCode').innerText = `ROOM: ${code}`;
+            document.getElementById('myTeamNameDisplay').innerText = teamName;
+            document.getElementById('myTeamScoreDisplay').innerText = myScore;
+        }
+
+        async function pressBuzzer() {
+            if(buzzerWinner) return; // Locked if already pressed by someone
+            buzzerWinner = currentParticipantId;
+            const teamName = document.getElementById('myTeamNameDisplay').innerText;
+            buzzerWinnerName = teamName;
+            playBellSound();
+
+            document.getElementById('buzzerBtn').disabled = true;
+            document.getElementById('buzzerBtn').classList.add('opacity-40', 'scale-95');
+            document.getElementById('buzzerStatusNote').innerText = "🔔 ANDA BERHASIL MENEKAN BEL PERTAMA!";
+
+            if (window.fb && window.fb.db && window.fb.user && roomCode) {
+                try {
+                    const roomRef = window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'rooms', roomCode);
+                    const snap = await window.fb.getDoc(roomRef);
+                    // Only claim buzzer if no one else beat us to the cloud
+                    if (snap.exists() && !snap.data().buzzerWinner) {
+                        await window.fb.updateDoc(roomRef, {
+                            buzzerWinner: currentParticipantId,
+                            buzzerWinnerName: teamName
+                        });
+                    }
+                } catch (err) {
+                    console.error("Buzzer sync error:", err);
+                }
+            } else {
+                // Local fallback update
+                document.getElementById('hostBuzzerAlertBox').className = 'p-4 rounded-xl bg-emerald-950/80 border border-emerald-500 text-center pulse-glow';
+                document.getElementById('buzzerWinnerDisplay').innerText = `${teamName} Menekan Bel Pertama!`;
+            }
+        }
+
+        // Initial setup check on load
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.get('room')) {
+                showParticipantJoinModal();
+            }
+        };
+
+        // Explicitly bind all inline HTML event handlers to global window scope
+        Object.assign(window, {
+            closeModal,
+            initHostMode,
+            showParticipantJoinModal,
+            closeParticipantJoinModal,
+            submitJoinParticipant,
+            copyShareLink,
+            updateTargetParticipants,
+            switchHostTab,
+            handleFileImport,
+            openQuestionModal,
+            closeQuestionModal,
+            toggleQuestionTypeFields,
+            saveQuestion,
+            editQuestion,
+            deleteQuestion,
+            resetParticipants,
+            removeParticipant,
+            changeTimerDuration,
+            startTimer,
+            resetTimer,
+            nextQuestion,
+            resetBuzzer,
+            adjustScore,
+            checkAnswerChoice,
+            pressBuzzer
+        });
+    </script>
+</body>
+</html>
